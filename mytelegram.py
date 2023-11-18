@@ -214,7 +214,7 @@ def balance_info(update: Update, context: CallbackContext):
         return
 
     # Вывод баланса и создание кнопок для обмена
-    text = f"Ваш баланс: {balance} PR\nВаш баланс в боте:  {balance}"
+    text = f"Ваш баланс: {balance} PR\nВаш баланс в боте:  {balance2}"
 
     keyboard = [
         [InlineKeyboardButton("Обменять Баланс", callback_data="exchange_balance")],
