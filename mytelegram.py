@@ -207,13 +207,14 @@ def balance_info(update: Update, context: CallbackContext):
 
     # Получение баланса пользователя
     balance, error = get_balance(user_id)
+    balance2, error = get_balance_from_database(user_id)
 
     if error:
         query.edit_message_text(text=f"Ошибка при получении баланса: {error}")
         return
 
     # Вывод баланса и создание кнопок для обмена
-    text = f"Ваш баланс: {balance} PR\nВаш баланс в боте: (откуда брать?)"
+    text = f"Ваш баланс: {balance} PR\nВаш баланс в боте:  {balance}"
 
     keyboard = [
         [InlineKeyboardButton("Обменять Баланс", callback_data="exchange_balance")],
@@ -225,6 +226,18 @@ def balance_info(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     query.edit_message_text(text=text, reply_markup=reply_markup)
+def get_balance_from_database(user_id):
+    # Здесь вы должны написать код для получения баланса из вашей базы данных
+    # Пример:
+    with connect_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT balance FROM users WHERE chat_id = ?", (user_id,))
+        result = cursor.fetchone()
+
+        if result:
+            return result[0], None
+        else:
+            return None, "Пользователь не найден в базе данных"
 def get_balance(user_id):
     api_url = "https://pr.social/api/transfer_balance/"
     api_key = "Owuftwg4PJV31SP6"
@@ -237,7 +250,7 @@ def get_balance(user_id):
         "currency": "pr"
     }
 
-    response = requests.get(api_url, params=params)
+    response = requests.get(api_url)
 
     # Обработка ответа
     if response.status_code == 200:
