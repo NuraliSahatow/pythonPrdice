@@ -215,7 +215,7 @@ def button(update: Update, context: CallbackContext):
     elif query.data == "e10000":
         toamount = 10000
         transfer_to_another_bot2(update,context,toamount)
-    elif query.data == "transfer_from_another_bot":
+    elif query.data == " ":
         transfer_from_another_bot1(update, context)
     elif query.data == "f100":
         toamount = 100
@@ -263,7 +263,7 @@ def transfer_to_another_bot2(update: Update, context: CallbackContext,toamount):
         text = f"Перевод {amount} PR на другой бот выполнен успешно!"
     else:
         text = f"Ошибка при переводе баланса: {error}"
-
+    query.edit_message_text(text=text)
     # Edit the original message and display the result
 def transfer_from_another_bot1(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -284,7 +284,6 @@ def transfer_from_another_bot1(update: Update, context: CallbackContext):
     reply_markup2 = InlineKeyboardMarkup(keyboard2)
     query.edit_message_text(text=text,reply_markup = reply_markup2)
 
-    context.bot.edit_message_text(chat_id=user_id, message_id=context.user_data["transfer_to_another_bot"]["message_id"], text=text)
 def transfer_from_another_bot2(update: Update, context: CallbackContext,toamount):
     user_id = update.callback_query.message.chat_id
     query = update.callback_query
@@ -295,14 +294,14 @@ def transfer_from_another_bot2(update: Update, context: CallbackContext,toamount
 
     if success:
         # Update the user's balance in the local database
-        update_balance_in_database(user_id, -amount)
+        update_balance_in_database(user_id, amount)
 
-        text = f"Перевод {amount} PR на другой бот выполнен успешно!"
+        text = f"Перевод {amount} PR на этот бот выполнен успешно!"
     else:
         text = f"Ошибка при переводе баланса: {error}"
 
     # Edit the original message and display the result
-    context.bot.edit_message_text(chat_id=user_id, message_id=context.user_data["transfer_to_another_bot"]["message_id"], text=text)
+    query.edit_message_text(text=text)
 def transfer_balance(user_id, amount, transfer_type):
     API_URL = "https://pr.social/api/transfer_balance/"
     # Perform the transfer using the API
