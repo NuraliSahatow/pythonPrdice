@@ -250,7 +250,7 @@ def get_balance(user_id):
         "currency": "pr"
     }
 
-    response = requests.get(api_url)
+    response = requests.get(api_url,params = params)
 
     # Обработка ответа
     if response.status_code == 200:
