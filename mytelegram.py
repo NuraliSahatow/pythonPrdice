@@ -304,6 +304,7 @@ def transfer_from_another_bot2(update: Update, context: CallbackContext,toamount
     # Edit the original message and display the result
     context.bot.edit_message_text(chat_id=user_id, message_id=context.user_data["transfer_to_another_bot"]["message_id"], text=text)
 def transfer_balance(user_id, amount, transfer_type):
+    API_URL = "https://pr.social/api/transfer_balance/"
     # Perform the transfer using the API
     params = {
         "key": "Owuftwg4PJV31SP6",
