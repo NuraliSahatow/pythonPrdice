@@ -215,7 +215,7 @@ def button(update: Update, context: CallbackContext):
     elif query.data == "e10000":
         toamount = 10000
         transfer_to_another_bot2(update,context,toamount)
-    elif query.data == " ":
+    elif query.data == "transfer_from_another_bot":
         transfer_from_another_bot1(update, context)
     elif query.data == "f100":
         toamount = 100
@@ -254,7 +254,7 @@ def transfer_to_another_bot2(update: Update, context: CallbackContext,toamount):
     amount = toamount
 
     # Transfer funds from this bot to another bot
-    success, error = transfer_balance(user_id, amount, "to")
+    success, error = transfer_tbalance(user_id, amount)
 
     if success:
         # Update the user's balance in the local database
@@ -290,7 +290,7 @@ def transfer_from_another_bot2(update: Update, context: CallbackContext,toamount
     amount = toamount
 
     # Transfer funds from this bot to another bot
-    success, error = transfer_balance(user_id, amount, "from")
+    success, error = transfer_fbalance(user_id, amount)
 
     if success:
         # Update the user's balance in the local database
@@ -302,13 +302,35 @@ def transfer_from_another_bot2(update: Update, context: CallbackContext,toamount
 
     # Edit the original message and display the result
     query.edit_message_text(text=text)
-def transfer_balance(user_id, amount, transfer_type):
+def transfer_tbalance(user_id, amount):
     API_URL = "https://pr.social/api/transfer_balance/"
     # Perform the transfer using the API
     params = {
         "key": "Owuftwg4PJV31SP6",
         "us_id": user_id,
-        "type": transfer_type,
+        "type": "to",
+        "num": amount,
+        "currency": "pr",
+    }
+
+    response = requests.get(API_URL, params=params)
+
+    # Process the response
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("error"):
+            return False, f"Error: {data['error']}"
+        elif data.get("success"):
+            return True, None
+    else:
+        return False, f"Failed to transfer balance. Status code: {response.status_code}"
+def transfer_fbalance(user_id, amount):
+    API_URL = "https://pr.social/api/transfer_balance/"
+    # Perform the transfer using the API
+    params = {
+        "key": "Owuftwg4PJV31SP6",
+        "us_id": user_id,
+        "type": "from",
         "num": amount,
         "currency": "pr",
     }
