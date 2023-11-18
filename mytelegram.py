@@ -201,6 +201,63 @@ def button(update: Update, context: CallbackContext):
     elif query.data == "p10000":
         bet_value = 10000
         join_room1(update,context,bet_value)
+    elif query.data == "transfer_to_another_bot":
+        transfer_to_another_bot1(update, context)
+
+def transfer_to_another_bot1(update: Update, context: CallbackContext):
+    query = update.callback_query
+    text = "Укажите сумму обмена"
+    context.user_data["transfer_to_another_bot"] = {"message_id": query.message.message_id}
+    query.edit_message_text(text=text)
+
+def transfer_to_another_bot2(update: Update, context: CallbackContext):
+    user_id = update.callback_query.message.chat_id
+    query = update.callback_query
+    amount = int(update.message.text)
+
+    # Transfer funds from this bot to another bot
+    success, error = transfer_balance(user_id, TARGET_BOT_ID, amount, "to")
+
+    if success:
+        # Update the user's balance in the local database
+        update_balance_in_database(user_id, -amount)
+
+        text = f"Перевод {amount} PR на другой бот выполнен успешно!"
+    else:
+        text = f"Ошибка при переводе баланса: {error}"
+
+    # Edit the original message and display the result
+    context.bot.edit_message_text(chat_id=user_id, message_id=context.user_data["transfer_to_another_bot"]["message_id"], text=text)
+
+def transfer_balance(user_id, target_id, amount, transfer_type):
+    # Perform the transfer using the API
+    params = {
+        "key": API_KEY,
+        "us_id": user_id,
+        "type": transfer_type,
+        "num": amount,
+        "currency": "pr",
+        "target_id": target_id
+    }
+
+    response = requests.get(API_URL, params=params)
+
+    # Process the response
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("error"):
+            return False, f"Error: {data['error']}"
+        elif data.get("success"):
+            return True, None
+    else:
+        return False, f"Failed to transfer balance. Status code: {response.status_code}"
+
+def update_balance_in_database(user_id, amount):
+    # Update the user's balance in the local database
+    with connect_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET balance = balance + ? WHERE chat_id = ?", (amount, user_id))
+        conn.commit()
 def balance_info(update: Update, context: CallbackContext):
     user_id = update.callback_query.message.chat_id
     query = update.callback_query
