@@ -533,12 +533,16 @@ def dice_handler(update: Update, context: CallbackContext):
 
                     if player1_dice != 0 and player2_dice != 0:
                         if player1_dice > player2_dice:
-                            cursor.execute("UPDATE rooms SET player1_balance = player1_balance + 5 WHERE id = ?", (room_id,))
-                            cursor.execute("UPDATE rooms SET player2_balance = player2_balance - 5 WHERE id = ?", (room_id,))
+                            cursor.execute("UPDATE users SET balance = balance + ? WHERE chat_id = ?", (amount, player1_chat_id,))
+
+                            cursor.execute("UPDATE users SET balance = balance - ? WHERE chat_id = ?", (amount, player2_chat_id,))
+
                             winner_id = player1_chat_id
                         elif player1_dice < player2_dice:
-                            cursor.execute("UPDATE rooms SET player1_balance = player1_balance - 5 WHERE id = ?", (room_id,))
-                            cursor.execute("UPDATE rooms SET player2_balance = player2_balance + 5 WHERE id = ?", (room_id,))
+                            cursor.execute("UPDATE users SET balance = balance - ? WHERE chat_id = ?", (amount, player1_chat_id,))
+
+                            cursor.execute("UPDATE users SET balance = balance + ? WHERE chat_id = ?", (amount, player2_chat_id,))
+
                             winner_id = player2_chat_id
                         else:
                             winner_id = None
@@ -574,27 +578,41 @@ def join_room1(update: Update, context: CallbackContext,bet_value):
         with connect_db() as conn:
             cursor = conn.cursor()
 
-            # Найдем доступные комнаты с выбранной ставкой
-            cursor.execute("SELECT id FROM rooms WHERE status = 'betted' AND Bet = ? AND player1_chat_id != ?", (bet_value, user_id))
-            available_rooms = cursor.fetchall()
+            # Retrieve the user's balance
+            cursor.execute("SELECT balance FROM users WHERE chat_id = ?", (user_id,))
+            user_balance = cursor.fetchone()[0]
 
-            if available_rooms:
-                # Подключим пользователя к первой доступной комнате
-                room_id = available_rooms[0][0]
-                cursor.execute("UPDATE rooms SET player2_chat_id = ?, status = 'started' WHERE id = ?", (user_id, room_id))
+            # Check if the user has enough balance to join the room
+            if user_balance >= bet_value:
+                # Deduct the bet amount from the user's balance
+                new_balance = user_balance - bet_value
+
+                # Update the user's balance in the database
+                cursor.execute("UPDATE users SET balance = ? WHERE chat_id = ?", (new_balance, user_id))
                 conn.commit()
 
-                # Отправим сообщение об успешном подключении
-                query.edit_message_text(text=f"Вы успешно присоединились к комнате с ставкой {bet_value} PR. Игра началась!")
+                # Find available rooms with the chosen bet
+                cursor.execute("SELECT id FROM rooms WHERE status = 'betted' AND Bet = ? AND player1_chat_id != ?", (bet_value, user_id))
+                available_rooms = cursor.fetchall()
 
-                # Запустим обработчик для броска костей
-                dice_handler(update, context)
+                if available_rooms:
+                    # Connect the user to the first available room
+                    room_id = available_rooms[0][0]
+                    cursor.execute("UPDATE rooms SET player2_chat_id = ?, status = 'started' WHERE id = ?", (user_id, room_id))
+                    conn.commit()
+
+                    # Send a message about successful connection
+                    query.edit_message_text(text=f"Вы успешно присоединились к комнате с ставкой {bet_value} PR. Игра началась!")
+
+                    # Run the dice handler for the dice roll
+                    dice_handler(update, context)
+                else:
+                    query.edit_message_text(text=f"Нет доступных комнат с выбранной ставкой {bet_value} PR.")
             else:
-                query.edit_message_text(text=f"Нет доступных комнат с выбранной ставкой {bet_value} PR.")
+                query.edit_message_text(text=f"У вас недостаточно средств для присоединения к комнате с ставкой {bet_value} PR.")
 
     except Exception as e:
         logger.error(f"Error in join_room1: {str(e)}")
-
 
 def join_room(update, context, page_number=1):
     with connect_db() as conn:
